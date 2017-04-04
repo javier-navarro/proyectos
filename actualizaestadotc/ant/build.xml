@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<project name="StoreAndForward" basedir=".." default="dist">
+
+	<!-- set up classpath -->
+	<path id="base.class.path">
+		<pathelement location="lib" />
+		<pathelement location="src/main/resources" />
+	</path>
+
+	<!-- init, inicializa todo partiendo por un chequeo de que la compilacion este al dia -->
+	<target name="init" depends="clean">
+		<echo>BUILD -> ${ant.project.name}</echo>
+		<tstamp />
+		<mkdir dir="build" />
+		<mkdir dir="dist" />
+	</target>
+
+	<!-- compile sources -->
+	<target name="compile" depends="init">
+		<javac destdir="build" debug="on" target="1.7">
+			<src path="src/main/java/cl/kubos" />
+			<!--
+			<src path="src/main/javagen" />
+			-->
+			<!-- set the classpath -->
+			<classpath refid="base.class.path" />
+		</javac>
+	</target>
+
+	<!-- genera distribuible -->
+	<target name="dist" depends="compile">
+		<jar jarfile="dist/ActualizaEstadoTc.jar">
+			<fileset dir="build" />
+		</jar>
+	</target>
+
+	<!-- delete temp directories -->
+	<target name="clean">
+		<delete dir="dist" />
+		<delete dir="build" />
+	</target>
+
+</project>

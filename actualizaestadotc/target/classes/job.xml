@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:batch="http://www.springframework.org/schema/batch"
+	xsi:schemaLocation="http://www.springframework.org/schema/batch http://www.springframework.org/schema/batch/spring-batch.xsd
+		http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd">
+
+	<batch:job id="importFileJob" job-repository="jobRepository">
+		<batch:step id="importFileStep">
+			<batch:tasklet>
+				<batch:chunk reader="employeeImporterReader" processor="employeeImporterProcessor"
+					writer="employeeImporterWriter" commit-interval="10000" skip-limit="10">
+					<batch:skippable-exception-classes>
+						<batch:include class="cl.kubos.tc.exceptions.CustomException" />
+						<batch:include class="org.springframework.batch.item.file.FlatFileParseException" />
+					</batch:skippable-exception-classes>
+					<batch:listeners>
+						<batch:listener ref="customSkipListener" />
+					</batch:listeners>
+				</batch:chunk>
+			</batch:tasklet>
+		</batch:step>
+		<batch:listeners>
+			<batch:listener ref="customJobListener" />
+		</batch:listeners>
+	</batch:job>
+
+	<bean id="customSkipListener" class="cl.kubos.tc.listener.CustomSkipListener" />
+	<bean id="customJobListener" class="cl.kubos.tc.listener.CustomJobListener" />
+
+	<!-- Reader, destacar que se salta la línea de las cabeceras -->
+
+	<bean id="employeeImporterReader" class="org.springframework.batch.item.file.FlatFileItemReader">
+		<property name="resource" value="${file}" />
+		<property name="encoding" value="utf8" />
+		<property name="lineMapper" ref="employeeImporterMapper" />
+		<property name="linesToSkip" value="1" />
+		<property name="strict" value="false" />
+		<property name="recordSeparatorPolicy" ref="skipBlankLineRecordSeparatorPolicy" />
+	</bean>
+
+	<bean id="skipBlankLineRecordSeparatorPolicy" class="cl.kubos.tc.separator.SkipBlankLinePolicy" />
+
+	<!-- Mapeo de cada fila del fichero -->
+
+	<bean id="employeeImporterMapper"
+		class="org.springframework.batch.item.file.mapping.DefaultLineMapper">
+		<property name="fieldSetMapper" ref="employeeAutoFieldSetMapper" />
+		<property name="lineTokenizer">
+			<bean
+				class="org.springframework.batch.item.file.transform.DelimitedLineTokenizer">
+				<property name="names" value="rut" />
+				<property name="delimiter" value="\n"/>
+			</bean>
+		</property>
+	</bean>
+
+
+	<!-- Mapeo de campos y objeto a mapear -->
+
+	<bean id="employeeAutoFieldSetMapper"
+		class="org.springframework.batch.item.file.mapping.BeanWrapperFieldSetMapper">
+		<property name="prototypeBeanName" value="employeeBean" />
+	</bean>
+
+	<bean id="employeeBean" class="cl.kubos.tc.model.Cliente" scope="prototype" />
+
+
+	<!-- Writer y processor -->
+
+	<bean id="employeeImporterWriter" class="cl.kubos.tc.writer.ClienteImporterWriter" >
+		<property name="clienteDAO" ref="clienteDAO" />
+	</bean>
+
+	<bean id="employeeImporterProcessor" class="cl.kubos.tc.processor.ClienteImporterProcessor" />
+
+	<!-- Database -->
+	<bean id="clienteDAO" class="cl.kubos.tc.dao.JdbcClienteDAO">
+		<property name="dataSource" ref="dataSource" />
+	</bean>
+</beans>
